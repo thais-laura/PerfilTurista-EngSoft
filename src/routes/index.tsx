@@ -32,6 +32,11 @@ function Index() {
       <TopBar />
       <Header />
       <NavMenu />
+      <div className="my-10 flex justify-center">
+        <h1 className="font-display text-4xl font-bold uppercase tracking-wide text-foreground sm:text-5xl">
+          O que você quer ver hoje?
+        </h1>
+      </div>
       <ChartsSection />
       <AboutSection />
       <Footer />

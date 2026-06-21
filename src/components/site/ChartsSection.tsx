@@ -20,7 +20,7 @@ import {
   type TourismData,
 } from "@/lib/tourism";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const pieColors = [
   "var(--color-chart-1)",
@@ -29,19 +29,48 @@ const pieColors = [
   "var(--color-chart-4)",
   "var(--color-chart-5)",
 ];
-
-// torná-los interativos
-function DataInicioBadge() {
+function DataBadge({
+  placeholder,
+  data,
+  setData,
+  minDate,
+}: {
+  placeholder: string;
+  data: string;
+  setData: React.Dispatch<React.SetStateAction<string>>;
+  minDate?: string;
+}) {
   const [aberto, setAberto] = useState(false);
-  const [data, setData] = useState("");
+
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        menuRef.current &&
+        !menuRef.current.contains(event.target as Node)
+      ) {
+        setAberto(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+
+    return () => {
+      document.removeEventListener(
+        "mousedown",
+        handleClickOutside
+      );
+    };
+  }, []);
 
   return (
-    <div className="relative inline-block">
+    <div ref={menuRef} className="relative inline-block">
       <button
         onClick={() => setAberto(!aberto)}
         className="inline-flex items-center gap-2 rounded border border-info/40 bg-card px-3 py-1 text-xs font-medium text-info shadow-sm"
       >
-        {data || "Data inicial"}
+        {data || placeholder}
         <ChevronDown className="h-3 w-3" />
       </button>
 
@@ -49,71 +78,114 @@ function DataInicioBadge() {
         <input
           type="date"
           value={data}
+          min={minDate}
           onChange={(e) => {
             setData(e.target.value);
             setAberto(false);
           }}
-          className="absolute left-0 top-full mt-2 rounded border bg-card p-2 shadow"
+          className="absolute left-0 top-full mt-2 rounded border bg-card p-2 shadow z-10"
         />
       )}
     </div>
   );
 }
 
-function DataFimBadge() {
+function DropdownBadge({
+  placeholder,
+  opcoes,
+}: {
+  placeholder: string;
+  opcoes: string[];
+}) {
   const [aberto, setAberto] = useState(false);
-  const [data, setData] = useState("");
+  const [valor, setValor] = useState("");
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        menuRef.current &&
+        !menuRef.current.contains(event.target as Node)
+      ) {
+        setAberto(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () =>
+      document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   return (
-    <div className="relative inline-block">
+    <div ref={menuRef} className="relative inline-block">
       <button
         onClick={() => setAberto(!aberto)}
         className="inline-flex items-center gap-2 rounded border border-info/40 bg-card px-3 py-1 text-xs font-medium text-info shadow-sm"
       >
-        {data || "Data final"}
+        {valor || placeholder}
         <ChevronDown className="h-3 w-3" />
       </button>
 
       {aberto && (
-        <input
-          type="date"
-          value={data}
-          onChange={(e) => {
-            setData(e.target.value);
-            setAberto(false);
-          }}
-          className="absolute left-0 top-full mt-2 rounded border bg-card p-2 shadow"
-        />
+        <div className="absolute left-0 top-full mt-2 w-40 rounded border bg-card shadow-lg z-10">
+          {opcoes.map((opcao) => (
+            <button
+              key={opcao}
+              onClick={() => {
+                setValor(opcao);
+                setAberto(false);
+              }}
+              className="block w-full px-3 py-2 text-left text-sm hover:bg-muted"
+            >
+              {opcao}
+            </button>
+          ))}
+        </div>
       )}
     </div>
-  );
-}
-
-
-function AtributoBadge() {
-  return (
-    <button className="inline-flex items-center gap-2 rounded border border-info/40 bg-card px-3 py-1 text-xs font-medium text-info shadow-sm">
-      Atributo
-      <ChevronDown className="h-3 w-3" />
-    </button>
-  );
-}
-
-function TipoGrafBadge() {
-  return (
-    <button className="inline-flex items-center gap-2 rounded border border-info/40 bg-card px-3 py-1 text-xs font-medium text-info shadow-sm">
-      Tipo de gráfico
-      <ChevronDown className="h-3 w-3" />
-    </button>
   );
 }
 
 function ChartCard({ children }: { children: React.ReactNode }) {
+  const [dataInicio, setDataInicio] = useState("");
+  const [dataFim, setDataFim] = useState("");
+
   return (
     <div className="rounded-md bg-secondary/70 p-4 shadow-sm ring-1 ring-border">
       <div className="mb-3">
-       <AtributoBadge /> <DataInicioBadge /> <DataFimBadge/> <TipoGrafBadge />
+        <DropdownBadge
+          placeholder="Atributo"
+          opcoes={[
+            "Perfil de Turista",
+            "Renda",
+            "Lugares Mais Visitados",
+            "Lotação de Parques",
+          ]}
+        />
+
+        <DataBadge
+          placeholder="Data inicial"
+          data={dataInicio}
+          setData={setDataInicio}
+        />
+
+        <DataBadge
+          placeholder="Data final"
+          data={dataFim}
+          setData={setDataFim}
+          minDate={dataInicio}
+        />
+
+        <DropdownBadge
+          placeholder="Tipo de gráfico"
+          opcoes={[
+            "Linha",
+            "Histograma",
+            "Pizza",
+          ]}
+        />
       </div>
+
       <div className="rounded bg-card p-3 ring-1 ring-border">
         <div className="h-64 w-full">{children}</div>
       </div>
