@@ -28,7 +28,7 @@ def aplicar_tendencia(opcoes, valor_alvo, peso_alvo=0.80):
                 
     return random.choices(opcoes, weights=pesos, k=1)[0]
 
-def gerar_dataset_turismo_estatistico(n_registros=5000):
+def gerar_dataset_turismo_estatistico(n_registros=5000, ano_alvo=2025):
     """
     Gera uma base de dados onde as rotas do fluxograma são tendências estatísticas,
     contemplando todos os campos estruturais das Tabelas 1 e 2.
@@ -77,14 +77,14 @@ def gerar_dataset_turismo_estatistico(n_registros=5000):
         }
     }
 
-    # Tabela 2: Feriados e Datas (Ano Base 2025)
+    # Tabela 2: Feriados e Datas (Ano Base ano_alvo)
     datas_feriados = {
-        "Carnaval": date(2025, 2, 17), "Páscoa": date(2025, 4, 5), "Tiradentes": date(2025, 4, 21),
-        "1º de Maio": date(2025, 5, 1), "Corpus Christi": date(2025, 6, 4), "07 de Setembro": date(2025, 9, 7),
-        "12 de Outubro": date(2025, 10, 12), "Semana do Saco Cheio": date(2025, 10, 15),
-        "02 de Novembro": date(2025, 11, 2), "15 de Novembro": date(2025, 11, 15),
-        "20 de Novembro": date(2025, 11, 20), "Natal": date(2025, 12, 25),
-        "Réveillon": date(2025, 12, 31), "Festa do Peão de Boiadeira": date(2025, 8, 20)
+        "Carnaval": date(ano_alvo, 2, 17), "Páscoa": date(ano_alvo, 4, 5), "Tiradentes": date(ano_alvo, 4, 21),
+        "1º de Maio": date(ano_alvo, 5, 1), "Corpus Christi": date(ano_alvo, 6, 4), "07 de Setembro": date(ano_alvo, 9, 7),
+        "12 de Outubro": date(ano_alvo, 10, 12), "Semana do Saco Cheio": date(ano_alvo, 10, 15),
+        "02 de Novembro": date(ano_alvo, 11, 2), "15 de Novembro": date(ano_alvo, 11, 15),
+        "20 de Novembro": date(ano_alvo, 11, 20), "Natal": date(ano_alvo, 12, 25),
+        "Réveillon": date(ano_alvo, 12, 31), "Festa do Peão de Boiadeira": date(ano_alvo, 8, 20)
     }
 
     def gerar_data_tendencia(feriados_alvo):
@@ -105,24 +105,24 @@ def gerar_dataset_turismo_estatistico(n_registros=5000):
             alvo_escolhido = random.choices(feriados_alvo, weights=pesos_feriados, k=1)[0]
             
             if alvo_escolhido == "Dias Úteis":
-                d = date(2025, 1, 1) + timedelta(days=random.randint(0, 364))
+                d = date(ano_alvo, 1, 1) + timedelta(days=random.randint(0, 364))
                 while d.weekday() > 4: d += timedelta(days=1)
                 return d
             elif alvo_escolhido == "Fim de Semana Comum":
-                d = date(2025, 1, 1) + timedelta(days=random.randint(0, 364))
+                d = date(ano_alvo, 1, 1) + timedelta(days=random.randint(0, 364))
                 while d.weekday() not in [4, 5]: d += timedelta(days=1)
                 return d
             elif alvo_escolhido == "Férias de Janeiro":
-                return date(2025, 1, 1) + timedelta(days=random.randint(0, 30))
+                return date(ano_alvo, 1, 1) + timedelta(days=random.randint(0, 30))
             elif alvo_escolhido == "Férias de Julho":
-                return date(2025, 7, 1) + timedelta(days=random.randint(0, 30))
+                return date(ano_alvo, 7, 1) + timedelta(days=random.randint(0, 30))
             elif alvo_escolhido == "Férias de Dezembro":
-                return date(2025, 12, 1) + timedelta(days=random.randint(0, 30))
+                return date(ano_alvo, 12, 1) + timedelta(days=random.randint(0, 30))
             else:
-                data_base = datas_feriados.get(alvo_escolhido, date(2025, 1, 15))
+                data_base = datas_feriados.get(alvo_escolhido, date(ano_alvo, 1, 15))
                 return data_base + timedelta(days=random.randint(-2, 1))
         else:
-            return date(2025, 1, 1) + timedelta(days=random.randint(0, 364))
+            return date(ano_alvo, 1, 1) + timedelta(days=random.randint(0, 364))
 
     dados = []
     nomes_perfis = list(perfis_tendencias.keys())
@@ -196,10 +196,15 @@ def gerar_dataset_turismo_estatistico(n_registros=5000):
     return pd.DataFrame(dados)
 
 if __name__ == "__main__":
-    random.seed(time.time())
+    random.seed(42)
     
+    Base = 5000
+    delta = Base/20
+    n_registros = Base+random.randint(-delta,delta)
+    ano_alvo = 2025
+
     # Geração dos dados
-    dataset_tabelas = gerar_dataset_turismo_estatistico(n_registros=5000)
+    dataset_tabelas = gerar_dataset_turismo_estatistico(n_registros=n_registros, ano_alvo=ano_alvo)
 
     dataset_tabelas.to_csv("dataset_turismo_olimpia.csv", index=False, encoding='utf-8')
     
