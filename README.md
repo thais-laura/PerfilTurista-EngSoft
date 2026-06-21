@@ -25,6 +25,7 @@ Esse comando instala as dependências necessárias do projeto.
 
 Ainda no terminal, dentro da pasta do projeto, execute:
 bun run dev
+
 O terminal irá mostrar um endereço local, por exemplo:
 http://localhost:8080
 ou
