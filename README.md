@@ -2,6 +2,7 @@
 
 **Pré-requisitos**
 Antes de executar o projeto, é necessário ter instalado:
+
 ● Node.js versão 20 ou superior - https://nodejs.org
 ● Bun - https://bun.sh
 
