@@ -2,13 +2,24 @@ from pydantic import BaseModel, Field
 from datetime import date
 from typing import Dict, Optional, List
 
+class PlotRequest(BaseModel):
+    start_date: date = Field(..., description="Start date for the forecast (YYYY-MM-DD)")
+    end_date: date = Field(..., description="End date for the forecast (YYYY-MM-DD)")
+    filters: Optional[Dict[str, str]] = Field(
+        default=None, 
+        description="Filters to target specific attributes, e.g., {'attribute': 'renda'} and/or  models, e.g., {'model': 'casal'}"
+    )
+
 class ForecastRequest(BaseModel):
     start_date: date = Field(..., description="Start date for the forecast (YYYY-MM-DD)")
     end_date: date = Field(..., description="End date for the forecast (YYYY-MM-DD)")
-    models: List[str] = []
+    model_name: str = Field(..., description="Model used for time series prediction.")
+    filters: Optional[Dict[str, str]] = Field(
+        default=None, 
+        description="Filters to target specific attributes, e.g., {'attribute': 'renda'} and/or  models, e.g., {'model': 'casal'}"
+    )
 
-class ForecastResponse(BaseModel):
-    ds: date
-    yhat: float
-    yhat_lower: float
-    yhat_upper: float
+class PlotResponse(BaseModel):
+    plot_id: str
+    status: str
+    image_url: str

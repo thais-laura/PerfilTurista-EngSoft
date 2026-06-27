@@ -1,11 +1,6 @@
 import pandas as pd
-from pathlib import Path
 from statsmodels.tsa.seasonal import seasonal_decompose
-from services.tourist import Tourist_Types
-
-CURR_PATH = Path(__file__).resolve().parent
-ORG_DATA_PATH = CURR_PATH.parent / "data/original"
-PROC_DATA_PATH = CURR_PATH.parent / "data/processed"
+from services.config import Tourist_Types, PATHS
 
 #Agrupar numeros de turistas por periodo escolhido.
 def group_by_freq(df, freq="D"):
@@ -22,23 +17,23 @@ def filter_by_type(df, type):
 
 #Concatenar dados históricos de 2021-2025 para treino dos modelos.
 def concat_historical_data():
-    csv_files = list(ORG_DATA_PATH.glob("*.csv"))
+    csv_files = list(PATHS["ORIGINAL"].glob("*.csv"))
     df_list = [pd.read_csv(file) for file in csv_files]
 
     if df_list:
         combined_df = pd.concat(df_list, sort=True, ignore_index=True)
-        TARGET_PATH = PROC_DATA_PATH / 'dataset_total.csv'
+        TARGET_PATH = PATHS["PROCESSED"] / 'dataset_total.csv'
         combined_df.to_csv(TARGET_PATH, index=False, encoding='utf-8')
     else:
         print("No CSV files found.")
 
 def divide_historical_data_by_type():
-    csv_file = PROC_DATA_PATH / "dataset_total.csv"
+    csv_file = PATHS["PROCESSED"] / "dataset_total.csv"
     if csv_file.is_file():
         df = pd.read_csv(csv_file)
         for tourist_type, tourist_data in Tourist_Types.items():
             df_type = filter_by_type(df, tourist_type)
-            TARGET_PATH = PROC_DATA_PATH / f'dataset_{tourist_data["name"]}.csv'
+            TARGET_PATH = PATHS["PROCESSED"] / f'dataset_{tourist_data["name"]}.csv'
             df_type.to_csv(TARGET_PATH, index=False, encoding='utf-8')
     else:
         print("The total dataset file doesn't exist.")

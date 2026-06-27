@@ -1,20 +1,15 @@
 import pandas as pd
-from pathlib import Path
 import numpy as np
 from datetime import datetime, timedelta, date
 from prophet import Prophet
 from prophet.serialize import model_to_json
 from services.data_proc import make_prophet_df, group_by_freq
-from services.tourist import Tourist_Types
+from services.config import Tourist_Types, PATHS
 import json
 
-CURR_PATH = Path(__file__).resolve().parent
-DATA_PATH = CURR_PATH.parent / "data"
-MODELS_PATH = DATA_PATH / "models"
-PROC_DATA_PATH = DATA_PATH / "processed"
 
 def train_and_export_model(model_name, csv_name):
-    CSV_PATH = PROC_DATA_PATH / csv_name
+    CSV_PATH = PATHS["PROCESSED"] / csv_name
     df = pd.read_csv(CSV_PATH)
     df_freq = group_by_freq(df=df, freq="D")
     df_prophet = make_prophet_df(df_freq)
@@ -24,7 +19,7 @@ def train_and_export_model(model_name, csv_name):
     model = model.add_country_holidays(country_name="BR")
     model.fit(df_prophet)
 
-    TARGET_PATH = MODELS_PATH / f"{model_name}.json"
+    TARGET_PATH = PATHS["MODELS"] / f"{model_name}.json"
     with open(TARGET_PATH, 'w') as fout:
         json.dump(model_to_json(model), fout)
 
