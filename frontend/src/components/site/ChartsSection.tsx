@@ -1,21 +1,41 @@
 import { Info, ChevronDown } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchForecastPlot } from "@/lib/tourism";
-
 import { useEffect, useRef, useState } from "react";
 
-// Mapeamento entre o rótulo exibido no dropdown e o nome técnico do modelo
-// no backend (corresponde ao sufixo dos arquivos em data/models/).
+// ---------------------------------------------------------------------------
+// Mapeamento rótulo visual → nome técnico do modelo no backend.
+// Corresponde ao sufixo dos arquivos em data/models/ (ex: model_casal.json).
+// ---------------------------------------------------------------------------
 const MODELOS: Record<string, string> = {
-  "Casal de fim de semana":     "casal",
+  "Casal de fim de semana":       "casal",
   "Família de parques aquáticos": "familia",
-  "Turista fiel premium":        "premium",
-  "Turista Corporativo":         "corporativo",
-  "Turista Econômico":           "economico",
-  "Turista de Evento":           "evento",
-  "Total":                       "total",
+  "Turista fiel premium":         "premium",
+  "Turista Corporativo":          "corporativo",
+  "Turista Econômico":            "economico",
+  "Turista de Evento":            "evento",
+  "Total":                        "total",
 };
 
+// Tipos de gráfico disponíveis para dados históricos.
+const TIPOS_GRAFICO = [
+  "Quantidade de Turistas por Perfil",
+  "Presença dos Perfis por Serviço",
+  "Quantidade de Perfil em Serviço",
+] as const;
+type TipoGrafico = (typeof TIPOS_GRAFICO)[number];
+
+// Opções de agrupamento temporal para séries históricas e previsões.
+const AGRUPAMENTOS = ["Diariamente", "Mensalmente", "Anualmente"] as const;
+
+// ---------------------------------------------------------------------------
+// DataBadge — botão que abre um <input type="date"> nativo ao ser clicado.
+// Props:
+//   placeholder — texto exibido enquanto nenhuma data for selecionada.
+//   data        — valor atual vindo do pai (controlled component).
+//   setData     — função para atualizar o valor no pai.
+//   minDate     — limita o calendário a datas a partir deste valor.
+// ---------------------------------------------------------------------------
 function DataBadge({
   placeholder,
   data,
@@ -28,27 +48,17 @@ function DataBadge({
   minDate?: string;
 }) {
   const [aberto, setAberto] = useState(false);
-
   const menuRef = useRef<HTMLDivElement>(null);
 
+  // Fecha o calendário ao clicar fora do componente.
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (
-        menuRef.current &&
-        !menuRef.current.contains(event.target as Node)
-      ) {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
         setAberto(false);
       }
     }
-
     document.addEventListener("mousedown", handleClickOutside);
-
-    return () => {
-      document.removeEventListener(
-        "mousedown",
-        handleClickOutside
-      );
-    };
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   return (
@@ -70,13 +80,21 @@ function DataBadge({
             setData(e.target.value);
             setAberto(false);
           }}
-          className="absolute left-0 top-full mt-2 rounded border bg-card p-2 shadow z-10"
+          className="absolute left-0 top-full z-10 mt-2 rounded border bg-card p-2 shadow"
         />
       )}
     </div>
   );
 }
 
+// ---------------------------------------------------------------------------
+// DropdownBadge — botão que abre uma lista de opções ao ser clicado.
+// Props:
+//   placeholder — texto exibido enquanto nenhuma opção for selecionada.
+//   opcoes      — lista de strings exibidas no menu.
+//   valor       — opção atualmente selecionada (vem do pai).
+//   setValor    — notifica o pai quando o usuário escolhe uma opção.
+// ---------------------------------------------------------------------------
 function DropdownBadge({
   placeholder,
   opcoes,
@@ -89,22 +107,16 @@ function DropdownBadge({
   setValor: (v: string) => void;
 }) {
   const [aberto, setAberto] = useState(false);
-  // estado removido daqui — agora vem via props (valor/setValor)
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (
-        menuRef.current &&
-        !menuRef.current.contains(event.target as Node)
-      ) {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
         setAberto(false);
       }
     }
-
     document.addEventListener("mousedown", handleClickOutside);
-    return () =>
-      document.removeEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   return (
@@ -118,7 +130,7 @@ function DropdownBadge({
       </button>
 
       {aberto && (
-        <div className="absolute left-0 top-full mt-2 w-40 rounded border bg-card shadow-lg z-10">
+        <div className="absolute left-0 top-full z-10 mt-2 w-56 rounded border bg-card shadow-lg">
           {opcoes.map((opcao) => (
             <button
               key={opcao}
@@ -137,40 +149,66 @@ function DropdownBadge({
   );
 }
 
-function ChartCard() {
-  const [dataInicio, setDataInicio] = useState("");
-  const [dataFim, setDataFim] = useState("");
-  // rótulo visual selecionado pelo usuário
-  const [modeloLabel, setModeloLabel] = useState("");
-  // tipoGrafico não influencia a query ainda, mas já é controlado pelo pai
-  const [tipoGrafico, setTipoGrafico] = useState("");
+// ---------------------------------------------------------------------------
+// HistoricoCard — cartão para a seção "Dados Históricos".
+//
+// Filtros disponíveis (em ordem):
+//   1. Tipo de gráfico  — sempre visível.
+//   2. Data inicial     — sempre visível.
+//   3. Data final       — sempre visível.
+//   4. Perfil do turista — visível para "Quantidade de Turistas por Perfil"
+//                          e "Quantidade de Perfil em Serviço".
+//   5. Agrupamento      — visível apenas para "Quantidade de Turistas por Perfil".
+//
+// A área do gráfico permanece como placeholder até que o backend
+// exponha endpoints para dados históricos.
+// ---------------------------------------------------------------------------
+function HistoricoCard() {
+  const [tipoGrafico, setTipoGrafico]   = useState<TipoGrafico | "">("");
+  const [dataInicio,  setDataInicio]    = useState("");
+  const [dataFim,     setDataFim]       = useState("");
+  const [perfilLabel, setPerfilLabel]   = useState("");
+  const [agrupamento, setAgrupamento]   = useState("");
 
-  // Converte o rótulo visual para o nome técnico que o backend espera
-  const modelName = MODELOS[modeloLabel] ?? "";
+  // Controla visibilidade condicional dos filtros extras.
+  const precisaPerfil     = tipoGrafico === "Quantidade de Turistas por Perfil"
+                          || tipoGrafico === "Quantidade de Perfil em Serviço";
+  const precisaAgrupamento = tipoGrafico === "Quantidade de Turistas por Perfil";
 
-  const { data, isLoading, isError } = useQuery({
-    queryKey: ["forecast-plot", dataInicio, dataFim, modelName],
-    queryFn: () => fetchForecastPlot(dataInicio, dataFim, modelName),
-    // só dispara quando os três campos estiverem preenchidos
-    enabled: !!(dataInicio && dataFim && modelName),
-  });
+  // Limpa os filtros condicionais quando o tipo de gráfico muda,
+  // evitando que valores de seleções anteriores contaminem a nova query.
+  function handleTipoGrafico(novoTipo: string) {
+    setTipoGrafico(novoTipo as TipoGrafico);
+    setPerfilLabel("");
+    setAgrupamento("");
+  }
+
+  // Verifica se todos os filtros obrigatórios para o tipo escolhido estão preenchidos.
+  const filtrosCompletos =
+    !!tipoGrafico &&
+    !!dataInicio &&
+    !!dataFim &&
+    (!precisaPerfil     || !!perfilLabel) &&
+    (!precisaAgrupamento || !!agrupamento);
 
   return (
     <div className="rounded-md bg-secondary/70 p-4 shadow-sm ring-1 ring-border">
-      <div className="mb-3">
+      {/* Barra de filtros com quebra de linha automática */}
+      <div className="mb-3 flex flex-wrap gap-2">
+        {/* 1. Tipo de gráfico — sempre visível, posicionado primeiro */}
         <DropdownBadge
-          placeholder="Tipo de Turista"
-          opcoes={Object.keys(MODELOS)}
-          valor={modeloLabel}
-          setValor={setModeloLabel}
+          placeholder="Tipo de gráfico"
+          opcoes={[...TIPOS_GRAFICO]}
+          valor={tipoGrafico}
+          setValor={handleTipoGrafico}
         />
 
+        {/* 2 e 3. Datas — sempre visíveis */}
         <DataBadge
           placeholder="Data inicial"
           data={dataInicio}
           setData={setDataInicio}
         />
-
         <DataBadge
           placeholder="Data final"
           data={dataFim}
@@ -178,24 +216,127 @@ function ChartCard() {
           minDate={dataInicio}
         />
 
+        {/* 4. Perfil do turista — condicional */}
+        {precisaPerfil && (
+          <DropdownBadge
+            placeholder="Perfil do turista"
+            opcoes={Object.keys(MODELOS)}
+            valor={perfilLabel}
+            setValor={setPerfilLabel}
+          />
+        )}
+
+        {/* 5. Agrupamento — condicional, apenas para "Quantidade de Turistas por Perfil" */}
+        {precisaAgrupamento && (
+          <DropdownBadge
+            placeholder="Agrupamento"
+            opcoes={[...AGRUPAMENTOS]}
+            valor={agrupamento}
+            setValor={setAgrupamento}
+          />
+        )}
+      </div>
+
+      {/* Área do gráfico */}
+      <div className="rounded bg-card p-3 ring-1 ring-border">
+        <div className="flex h-64 w-full items-center justify-center">
+          {!tipoGrafico || !dataInicio || !dataFim ? (
+            <p className="text-center text-xs text-muted-foreground">
+              Selecione o tipo de gráfico e o período para visualizar os dados.
+            </p>
+          ) : !filtrosCompletos ? (
+            <p className="text-center text-xs text-muted-foreground">
+              Selecione as opções restantes para gerar o gráfico.
+            </p>
+          ) : (
+            // Placeholder até que o endpoint de dados históricos seja implementado no backend.
+            <p className="text-center text-xs text-muted-foreground">
+              Visualização de dados históricos em desenvolvimento.
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// PrevisaoCard — cartão para as seções "Previsões Históricas" e
+// "Previsões com Dados Externos".
+//
+// Exibe apenas os filtros referentes a "Quantidade de Turistas por Perfil":
+//   1. Perfil do turista
+//   2. Data inicial
+//   3. Data final
+//   4. Agrupamento
+//
+// Dispara automaticamente o POST ao backend (via useQuery) assim que
+// todos os quatro filtros estiverem preenchidos.
+// ---------------------------------------------------------------------------
+function PrevisaoCard() {
+  const [modeloLabel, setModeloLabel] = useState("");
+  const [dataInicio,  setDataInicio]  = useState("");
+  const [dataFim,     setDataFim]     = useState("");
+  const [agrupamento, setAgrupamento] = useState("");
+
+  // Converte o rótulo visual para o nome técnico que o backend espera.
+  const modelName = MODELOS[modeloLabel] ?? "";
+
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ["forecast-plot", dataInicio, dataFim, modelName],
+    queryFn:  () => fetchForecastPlot(dataInicio, dataFim, modelName),
+    // Só dispara quando os três campos obrigatórios da API estiverem preenchidos.
+    enabled:  !!(dataInicio && dataFim && modelName),
+  });
+
+  return (
+    <div className="rounded-md bg-secondary/70 p-4 shadow-sm ring-1 ring-border">
+      <div className="mb-3 flex flex-wrap gap-2">
+        {/* 1. Perfil do turista */}
         <DropdownBadge
-          placeholder="Tipo de gráfico"
-          opcoes={["Linha", "Histograma", "Pizza"]}
-          valor={tipoGrafico}
-          setValor={setTipoGrafico}
+          placeholder="Perfil do turista"
+          opcoes={Object.keys(MODELOS)}
+          valor={modeloLabel}
+          setValor={setModeloLabel}
+        />
+
+        {/* 2 e 3. Datas */}
+        <DataBadge
+          placeholder="Data inicial"
+          data={dataInicio}
+          setData={setDataInicio}
+        />
+        <DataBadge
+          placeholder="Data final"
+          data={dataFim}
+          setData={setDataFim}
+          minDate={dataInicio}
+        />
+
+        {/* 4. Agrupamento */}
+        <DropdownBadge
+          placeholder="Agrupamento"
+          opcoes={[...AGRUPAMENTOS]}
+          valor={agrupamento}
+          setValor={setAgrupamento}
         />
       </div>
 
+      {/* Área do gráfico */}
       <div className="rounded bg-card p-3 ring-1 ring-border">
-        <div className="h-64 w-full flex items-center justify-center">
+        <div className="flex h-64 w-full items-center justify-center">
           {!dataInicio || !dataFim || !modelName ? (
             <p className="text-center text-xs text-muted-foreground">
-              Selecione o atributo e o período para gerar a previsão.
+              Selecione o perfil e o período para gerar a previsão.
             </p>
           ) : isLoading ? (
-            <p className="text-center text-sm text-muted-foreground">Gerando previsão…</p>
+            <p className="text-center text-sm text-muted-foreground">
+              Gerando previsão…
+            </p>
           ) : isError ? (
-            <p className="text-center text-sm text-destructive">Erro ao gerar gráfico. Tente novamente.</p>
+            <p className="text-center text-sm text-destructive">
+              Erro ao gerar gráfico. Tente novamente.
+            </p>
           ) : data ? (
             <img
               src={data.image_url}
@@ -209,7 +350,9 @@ function ChartCard() {
   );
 }
 
-
+// ---------------------------------------------------------------------------
+// SectionTitle — título visual de cada seção da página.
+// ---------------------------------------------------------------------------
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
     <div className="mb-8 flex items-center justify-center gap-3">
@@ -223,22 +366,27 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
   );
 }
 
+// ---------------------------------------------------------------------------
+// ChartsSection — componente exportado inserido na página principal.
+// Compõe três seções independentes: uma com HistoricoCard e duas com
+// PrevisaoCard. Cada instância tem seu próprio estado isolado.
+// ---------------------------------------------------------------------------
 export function ChartsSection() {
   return (
     <section className="mx-auto max-w-6xl px-4 py-14">
       <div className="mt-16">
         <SectionTitle>Dados Históricos</SectionTitle>
-        <ChartCard />
+        <HistoricoCard />
       </div>
 
       <div className="mt-16">
         <SectionTitle>Previsões Históricas</SectionTitle>
-        <ChartCard />
+        <PrevisaoCard />
       </div>
 
       <div className="mt-16">
         <SectionTitle>Previsões com Dados Externos</SectionTitle>
-        <ChartCard />
+        <PrevisaoCard />
       </div>
     </section>
   );
