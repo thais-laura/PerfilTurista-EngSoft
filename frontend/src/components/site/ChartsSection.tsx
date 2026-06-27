@@ -1,34 +1,21 @@
 import { Info, ChevronDown } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import {
-  LineChart,
-  Line,
-  PieChart,
-  Pie,
-  Cell,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Legend,
-} from "recharts";
-import {
-  tourismQueryOptions,
-  type TourismData,
-} from "@/lib/tourism";
+import { fetchForecastPlot } from "@/lib/tourism";
 
 import { useEffect, useRef, useState } from "react";
 
-const pieColors = [
-  "var(--color-chart-1)",
-  "var(--color-chart-3)",
-  "var(--color-chart-2)",
-  "var(--color-chart-4)",
-  "var(--color-chart-5)",
-];
+// Mapeamento entre o rótulo exibido no dropdown e o nome técnico do modelo
+// no backend (corresponde ao sufixo dos arquivos em data/models/).
+const MODELOS: Record<string, string> = {
+  "Casal de fim de semana":     "casal",
+  "Família de parques aquáticos": "familia",
+  "Turista fiel premium":        "premium",
+  "Turista Corporativo":         "corporativo",
+  "Turista Econômico":           "economico",
+  "Turista de Evento":           "evento",
+  "Total":                       "total",
+};
+
 function DataBadge({
   placeholder,
   data,
@@ -93,12 +80,16 @@ function DataBadge({
 function DropdownBadge({
   placeholder,
   opcoes,
+  valor,
+  setValor,
 }: {
   placeholder: string;
   opcoes: string[];
+  valor: string;
+  setValor: (v: string) => void;
 }) {
   const [aberto, setAberto] = useState(false);
-  const [valor, setValor] = useState("");
+  // estado removido daqui — agora vem via props (valor/setValor)
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -146,21 +137,32 @@ function DropdownBadge({
   );
 }
 
-function ChartCard({ children }: { children: React.ReactNode }) {
+function ChartCard() {
   const [dataInicio, setDataInicio] = useState("");
   const [dataFim, setDataFim] = useState("");
+  // rótulo visual selecionado pelo usuário
+  const [modeloLabel, setModeloLabel] = useState("");
+  // tipoGrafico não influencia a query ainda, mas já é controlado pelo pai
+  const [tipoGrafico, setTipoGrafico] = useState("");
+
+  // Converte o rótulo visual para o nome técnico que o backend espera
+  const modelName = MODELOS[modeloLabel] ?? "";
+
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ["forecast-plot", dataInicio, dataFim, modelName],
+    queryFn: () => fetchForecastPlot(dataInicio, dataFim, modelName),
+    // só dispara quando os três campos estiverem preenchidos
+    enabled: !!(dataInicio && dataFim && modelName),
+  });
 
   return (
     <div className="rounded-md bg-secondary/70 p-4 shadow-sm ring-1 ring-border">
       <div className="mb-3">
         <DropdownBadge
-          placeholder="Atributo"
-          opcoes={[
-            "Perfil de Turista",
-            "Renda",
-            "Lugares Mais Visitados",
-            "Lotação de Parques",
-          ]}
+          placeholder="Tipo de Turista"
+          opcoes={Object.keys(MODELOS)}
+          valor={modeloLabel}
+          setValor={setModeloLabel}
         />
 
         <DataBadge
@@ -178,20 +180,35 @@ function ChartCard({ children }: { children: React.ReactNode }) {
 
         <DropdownBadge
           placeholder="Tipo de gráfico"
-          opcoes={[
-            "Linha",
-            "Histograma",
-            "Pizza",
-          ]}
+          opcoes={["Linha", "Histograma", "Pizza"]}
+          valor={tipoGrafico}
+          setValor={setTipoGrafico}
         />
       </div>
 
       <div className="rounded bg-card p-3 ring-1 ring-border">
-        <div className="h-64 w-full">{children}</div>
+        <div className="h-64 w-full flex items-center justify-center">
+          {!dataInicio || !dataFim || !modelName ? (
+            <p className="text-center text-xs text-muted-foreground">
+              Selecione o atributo e o período para gerar a previsão.
+            </p>
+          ) : isLoading ? (
+            <p className="text-center text-sm text-muted-foreground">Gerando previsão…</p>
+          ) : isError ? (
+            <p className="text-center text-sm text-destructive">Erro ao gerar gráfico. Tente novamente.</p>
+          ) : data ? (
+            <img
+              src={data.image_url}
+              alt="Gráfico de previsão de turismo"
+              className="h-full w-full object-contain"
+            />
+          ) : null}
+        </div>
       </div>
     </div>
   );
 }
+
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
@@ -206,134 +223,23 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
   );
 }
 
-const tooltipStyle = {
-  background: "var(--color-card)",
-  border: "1px solid var(--color-border)",
-  borderRadius: 6,
-  fontSize: 12,
-} as const;
-
-
-// alterar essa parte
-function Charts({ data }: { data: TourismData }) {
+export function ChartsSection() {
   return (
-    <>
-      <SectionTitle>Dados Históricos</SectionTitle>
-
+    <section className="mx-auto max-w-6xl px-4 py-14">
       <div className="mt-16">
-        <ChartCard>
-          <p className="mb-2 text-center text-xs font-semibold text-muted-foreground">
-            Visitantes ao longo do ano
-          </p>
-          <ResponsiveContainer width="100%" height="88%">
-            <LineChart data={data.visitantesPorMes} margin={{ top: 5, right: 10, left: -18, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
-              <XAxis dataKey="mes" tick={{ fontSize: 10 }} stroke="var(--color-muted-foreground)" />
-              <YAxis tick={{ fontSize: 10 }} stroke="var(--color-muted-foreground)" />
-              <Tooltip contentStyle={tooltipStyle} />
-              <Line
-                type="monotone"
-                dataKey="visitantes"
-                stroke="var(--color-chart-4)"
-                strokeWidth={2}
-                dot={{ r: 3 }}
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        </ChartCard>
+        <SectionTitle>Dados Históricos</SectionTitle>
+        <ChartCard />
       </div>
 
       <div className="mt-16">
         <SectionTitle>Previsões Históricas</SectionTitle>
-
-          <div>
-            <h3 className="mb-4 text-center font-display text-xl font-bold text-foreground">
-            </h3>
-            <ChartCard>
-              <p className="mb-2 text-center text-xs font-semibold text-muted-foreground">
-              </p>
-              <ResponsiveContainer width="100%" height="88%">
-                <BarChart
-                  data={data.gastoPorSetor}
-                  layout="vertical"
-                  margin={{ top: 5, right: 16, left: 10, bottom: 0 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
-                  <XAxis type="number" tick={{ fontSize: 9 }} stroke="var(--color-muted-foreground)" />
-                  <YAxis
-                    type="category"
-                    dataKey="setor"
-                    width={70}
-                    tick={{ fontSize: 9 }}
-                    stroke="var(--color-muted-foreground)"
-                  />
-                  <Tooltip
-                    formatter={(v: number) => `R$ ${v.toLocaleString("pt-BR")}`}
-                    contentStyle={tooltipStyle}
-                  />
-                  <Bar dataKey="valor" fill="var(--color-chart-1)" radius={[0, 3, 3, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </ChartCard>
-          </div>
+        <ChartCard />
       </div>
 
-        <div className="mt-16">
+      <div className="mt-16">
         <SectionTitle>Previsões com Dados Externos</SectionTitle>
-
-          <div>
-            <h3 className="mb-4 text-center font-display text-xl font-bold text-foreground">
-            </h3>
-            <ChartCard>
-              <p className="mb-2 text-center text-xs font-semibold text-muted-foreground">
-              </p>
-              <ResponsiveContainer width="100%" height="88%">
-                <BarChart
-                  data={data.gastoPorSetor}
-                  layout="vertical"
-                  margin={{ top: 5, right: 16, left: 10, bottom: 0 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
-                  <XAxis type="number" tick={{ fontSize: 9 }} stroke="var(--color-muted-foreground)" />
-                  <YAxis
-                    type="category"
-                    dataKey="setor"
-                    width={70}
-                    tick={{ fontSize: 9 }}
-                    stroke="var(--color-muted-foreground)"
-                  />
-                  <Tooltip
-                    formatter={(v: number) => `R$ ${v.toLocaleString("pt-BR")}`}
-                    contentStyle={tooltipStyle}
-                  />
-                  <Bar dataKey="valor" fill="var(--color-chart-1)" radius={[0, 3, 3, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </ChartCard>
-          </div>
+        <ChartCard />
       </div>
-    </>
-  );
-}
-
-function StatusMessage({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="grid place-items-center rounded-md bg-secondary/60 py-20 text-sm text-muted-foreground ring-1 ring-border">
-      {children}
-    </div>
-  );
-}
-
-export function ChartsSection() {
-  const { data, isLoading, isError } = useQuery(tourismQueryOptions);
-
-  return (
-    <section className="mx-auto max-w-6xl px-4 py-14">
-      {isLoading && <StatusMessage>Carregando dados do observatório…</StatusMessage>}
-      {isError && (
-        <StatusMessage>Não foi possível carregar os dados. Tente novamente.</StatusMessage>
-      )}
-      {data && <Charts data={data} />}
     </section>
   );
 }

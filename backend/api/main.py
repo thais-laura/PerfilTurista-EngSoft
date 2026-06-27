@@ -1,5 +1,6 @@
 from fastapi import FastAPI, HTTPException, status, Request, Query, Path, Body
 from fastapi.responses import FileResponse
+from fastapi.middleware.cors import CORSMiddleware
 from typing import Annotated
 from pydantic import BaseModel, Field
 from fastapi.staticfiles import StaticFiles
@@ -16,6 +17,15 @@ async def lifespan(app: FastAPI):
     tasks.MODEL_CACHE.clear()
 
 app = FastAPI(title="API Tourdev", lifespan=lifespan)
+
+# Permite que o frontend (localhost:8080) acesse o backend (localhost:8000).
+# O browser bloqueia requisições entre origens diferentes sem esse middleware.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:8080"],
+    allow_methods=["*"],   # GET, POST, OPTIONS, etc.
+    allow_headers=["*"],   # Content-Type, Authorization, etc.
+)
 
 app.mount("/images", StaticFiles(directory="./data/images"), name="images")
 
