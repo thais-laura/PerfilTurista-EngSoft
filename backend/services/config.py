@@ -13,23 +13,23 @@ PATHS = {
 }
 
 Tourist_Types = {
-    "Casal de fim de semana": {"name": "Casal"},
-    "Familia de parques aquaticos": {"name": "Familia"},
-    "Turista fiel premium": {"name": "Premium"},
-    "Turista Corporativo": {"name": "Corporativo"}, 
-    "Turista econômico": {"name": "Economico"}, 
-    "Turista de Evento": {"name": "Evento"}
+    "Casal de fim de semana": {"name": "casal"},
+    "Familia de parques aquaticos": {"name": "familia"},
+    "Turista fiel premium": {"name": "premium"},
+    "Turista Corporativo": {"name": "corporativo"}, 
+    "Turista econômico": {"name": "economico"}, 
+    "Turista de Evento": {"name": "evento"}
     }
 
 Graph_Configs = {
     "Tourist_Type": {
-        "Total": {"color":"black"},
-        "Casal": {"color":"violet"},
-        "Familia": {"color":"turquoise"},
-        "Premium": {"color":"chocolate"},
-        "Corporativo": {"color":"goldenrod"},
-        "Economico": {"color":"limegreen"},
-        "Evento": {"color":"firebrick"}
+        "total": {"color":"black"},
+        "casal": {"color":"violet"},
+        "familia": {"color":"turquoise"},
+        "premium": {"color":"chocolate"},
+        "corporativo": {"color":"goldenrod"},
+        "economico": {"color":"limegreen"},
+        "evento": {"color":"firebrick"}
     },
     "Estabilishment": {
         "Restaurantes": {"color":"firebrick"},

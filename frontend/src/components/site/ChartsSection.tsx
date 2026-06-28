@@ -25,8 +25,12 @@ const TIPOS_GRAFICO = [
 ] as const;
 type TipoGrafico = (typeof TIPOS_GRAFICO)[number];
 
-// Opções de agrupamento temporal para séries históricas e previsões.
-const AGRUPAMENTOS = ["Diariamente", "Mensalmente", "Anualmente"] as const;
+// Agrupamentos: chave = rótulo exibido ao usuário, valor = código de frequência do pandas.
+const AGRUPAMENTOS: Record<string, string> = {
+  "Diariamente": "D",
+  "Mensalmente": "MS",
+  "Anualmente":  "YS",
+};
 
 // Traduz o rótulo de tipoGrafico para o valor de plot_type esperado pela API.
 const PLOT_TYPE: Record<string, PlotFilters["plot_type"]> = {
@@ -34,6 +38,17 @@ const PLOT_TYPE: Record<string, PlotFilters["plot_type"]> = {
   "Presença dos Perfis por Serviço":   "pizza",
   "Salário de turistas por perfil":    "columns",
 };
+
+// Serviços (atrativos) disponíveis para filtro no gráfico pizza.
+const SERVICOS = [
+  "Restaurantes",
+  "Parques de Entretenimento",
+  "Parques Aquáticos",
+  "Pontos Culturais",
+  "Hoteis",
+  "Pontos Turisticos",
+  "Centros de Evento",
+] as const;
 
 // ---------------------------------------------------------------------------
 // DataBadge — botão que abre um <input type="date"> nativo ao ser clicado.
@@ -176,11 +191,12 @@ function HistoricoCard() {
   const [dataFim,     setDataFim]     = useState("");
   const [perfilLabel, setPerfilLabel] = useState("");
   const [agrupamento, setAgrupamento] = useState("");
+  const [servico,     setServico]     = useState("");
 
   // Controla visibilidade condicional dos filtros extras.
-  // "Salário de turistas por perfil" e "Presença dos Perfis por Serviço" usam apenas datas.
   const precisaPerfil      = tipoGrafico === "Quantidade de Turistas por Perfil";
   const precisaAgrupamento = tipoGrafico === "Quantidade de Turistas por Perfil";
+  const precisaServico     = tipoGrafico === "Presença dos Perfis por Serviço";
 
   // Limpa os filtros condicionais quando o tipo de gráfico muda,
   // evitando que valores de seleções anteriores contaminem a nova query.
@@ -188,6 +204,7 @@ function HistoricoCard() {
     setTipoGrafico(novoTipo as TipoGrafico);
     setPerfilLabel("");
     setAgrupamento("");
+    setServico("");
   }
 
   // Verifica se todos os filtros obrigatórios para o tipo escolhido estão preenchidos.
@@ -196,7 +213,8 @@ function HistoricoCard() {
     !!dataInicio &&
     !!dataFim &&
     (!precisaPerfil      || !!perfilLabel) &&
-    (!precisaAgrupamento || !!agrupamento);
+    (!precisaAgrupamento || !!agrupamento) &&
+    (!precisaServico     || !!servico);
 
   // Monta o objeto filters que será enviado no body do POST.
   // prediction=false diferencia esta chamada das chamadas de previsão (PrevisaoCard).
@@ -204,13 +222,14 @@ function HistoricoCard() {
     ? {
         plot_type:  PLOT_TYPE[tipoGrafico],
         prediction: tipoGrafico === "Quantidade de Turistas por Perfil" ? false : undefined,
-        model:      precisaPerfil ? (MODELOS[perfilLabel] ?? undefined) : undefined,
-        group_by:   precisaAgrupamento ? (agrupamento || undefined) : undefined,
+        model:      precisaPerfil  ? (MODELOS[perfilLabel] ?? undefined) : undefined,
+        group_by:   precisaAgrupamento ? (AGRUPAMENTOS[agrupamento] || undefined) : undefined,
+        service:    precisaServico ? (servico || undefined) : undefined,
       }
     : null;
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: ["historico-plot", dataInicio, dataFim, tipoGrafico, perfilLabel, agrupamento],
+    queryKey: ["historico-plot", dataInicio, dataFim, tipoGrafico, perfilLabel, agrupamento, servico],
     queryFn:  () => fetchForecastPlot(dataInicio, dataFim, filters!),
     enabled:  filtrosCompletos && filters !== null,
   });
@@ -254,16 +273,26 @@ function HistoricoCard() {
         {precisaAgrupamento && (
           <DropdownBadge
             placeholder="Agrupamento"
-            opcoes={[...AGRUPAMENTOS]}
+            opcoes={Object.keys(AGRUPAMENTOS)}
             valor={agrupamento}
             setValor={setAgrupamento}
+          />
+        )}
+
+        {/* 6. Serviço — condicional, apenas para "Presença dos Perfis por Serviço" */}
+        {precisaServico && (
+          <DropdownBadge
+            placeholder="Serviço"
+            opcoes={[...SERVICOS]}
+            valor={servico}
+            setValor={setServico}
           />
         )}
       </div>
 
       {/* Área do gráfico */}
       <div className="rounded bg-card p-3 ring-1 ring-border">
-        <div className="flex h-64 w-full items-center justify-center">
+        <div className="flex h-[500px] w-full items-center justify-center">
           {!tipoGrafico || !dataInicio || !dataFim ? (
             <p className="text-center text-xs text-muted-foreground">
               Selecione o tipo de gráfico e o período para visualizar os dados.
@@ -317,7 +346,7 @@ function PrevisaoCard() {
     plot_type:  "line",
     prediction: true,
     model:      modelName || undefined,
-    group_by:   agrupamento || undefined,
+    group_by:   agrupamento ? AGRUPAMENTOS[agrupamento] : undefined,
   };
 
   const { data, isLoading, isError } = useQuery({
@@ -354,7 +383,7 @@ function PrevisaoCard() {
         {/* 4. Agrupamento */}
         <DropdownBadge
           placeholder="Agrupamento"
-          opcoes={[...AGRUPAMENTOS]}
+          opcoes={Object.keys(AGRUPAMENTOS)}
           valor={agrupamento}
           setValor={setAgrupamento}
         />
@@ -362,7 +391,7 @@ function PrevisaoCard() {
 
       {/* Área do gráfico */}
       <div className="rounded bg-card p-3 ring-1 ring-border">
-        <div className="flex h-64 w-full items-center justify-center">
+        <div className="flex h-[500px] w-full items-center justify-center">
           {!dataInicio || !dataFim || !modelName ? (
             <p className="text-center text-xs text-muted-foreground">
               Selecione o perfil e o período para gerar a previsão.

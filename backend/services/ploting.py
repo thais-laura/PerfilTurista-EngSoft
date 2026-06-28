@@ -154,7 +154,7 @@ def plot_forecast(forecast, start_date, end_date, model_name, period):
         df_plot['ds'], 
         df_plot['yhat_lower'], 
         df_plot['yhat_upper'], 
-        color=Graph_Configs["Tourist_type"][model_name]["color"], 
+        color=Graph_Configs["Tourist_Type"][model_name]["color"], 
         alpha=0.4, 
         label='Intervalo de Incerteza'
     )
@@ -162,7 +162,7 @@ def plot_forecast(forecast, start_date, end_date, model_name, period):
     plt.plot(
         df_plot['ds'], 
         df_plot['yhat'], 
-        color=Graph_Configs["Tourist_type"][model_name]["color"], 
+        color=Graph_Configs["Tourist_Type"][model_name]["color"], 
         linestyle='-', 
         linewidth=2, 
         label='Predição'
@@ -199,7 +199,7 @@ def plot_historic(start_date, end_date, tourist_name, period):
     plt.plot(
         df_plot['ds'], 
         df_plot['y'], 
-        color=Graph_Configs["Tourist_type"][tourist_name]["color"], 
+        color=Graph_Configs["Tourist_Type"][tourist_name]["color"], 
         linestyle='-', 
         linewidth=2, 
         label='Turistas'
