@@ -1,6 +1,6 @@
 import { Info, ChevronDown } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { fetchForecastPlot } from "@/lib/tourism";
+import { fetchForecastPlot, PlotFilters } from "@/lib/tourism";
 import { useEffect, useRef, useState } from "react";
 
 // ---------------------------------------------------------------------------
@@ -21,12 +21,19 @@ const MODELOS: Record<string, string> = {
 const TIPOS_GRAFICO = [
   "Quantidade de Turistas por Perfil",
   "Presença dos Perfis por Serviço",
-  "Quantidade de Perfil em Serviço",
+  "Salário de turistas por perfil",
 ] as const;
 type TipoGrafico = (typeof TIPOS_GRAFICO)[number];
 
 // Opções de agrupamento temporal para séries históricas e previsões.
 const AGRUPAMENTOS = ["Diariamente", "Mensalmente", "Anualmente"] as const;
+
+// Traduz o rótulo de tipoGrafico para o valor de plot_type esperado pela API.
+const PLOT_TYPE: Record<string, PlotFilters["plot_type"]> = {
+  "Quantidade de Turistas por Perfil": "line",
+  "Presença dos Perfis por Serviço":   "pizza",
+  "Salário de turistas por perfil":    "columns",
+};
 
 // ---------------------------------------------------------------------------
 // DataBadge — botão que abre um <input type="date"> nativo ao ser clicado.
@@ -164,15 +171,15 @@ function DropdownBadge({
 // exponha endpoints para dados históricos.
 // ---------------------------------------------------------------------------
 function HistoricoCard() {
-  const [tipoGrafico, setTipoGrafico]   = useState<TipoGrafico | "">("");
-  const [dataInicio,  setDataInicio]    = useState("");
-  const [dataFim,     setDataFim]       = useState("");
-  const [perfilLabel, setPerfilLabel]   = useState("");
-  const [agrupamento, setAgrupamento]   = useState("");
+  const [tipoGrafico, setTipoGrafico] = useState<TipoGrafico | "">("");
+  const [dataInicio,  setDataInicio]  = useState("");
+  const [dataFim,     setDataFim]     = useState("");
+  const [perfilLabel, setPerfilLabel] = useState("");
+  const [agrupamento, setAgrupamento] = useState("");
 
   // Controla visibilidade condicional dos filtros extras.
-  const precisaPerfil     = tipoGrafico === "Quantidade de Turistas por Perfil"
-                          || tipoGrafico === "Quantidade de Perfil em Serviço";
+  // "Salário de turistas por perfil" e "Presença dos Perfis por Serviço" usam apenas datas.
+  const precisaPerfil      = tipoGrafico === "Quantidade de Turistas por Perfil";
   const precisaAgrupamento = tipoGrafico === "Quantidade de Turistas por Perfil";
 
   // Limpa os filtros condicionais quando o tipo de gráfico muda,
@@ -188,8 +195,25 @@ function HistoricoCard() {
     !!tipoGrafico &&
     !!dataInicio &&
     !!dataFim &&
-    (!precisaPerfil     || !!perfilLabel) &&
+    (!precisaPerfil      || !!perfilLabel) &&
     (!precisaAgrupamento || !!agrupamento);
+
+  // Monta o objeto filters que será enviado no body do POST.
+  // prediction=false diferencia esta chamada das chamadas de previsão (PrevisaoCard).
+  const filters: PlotFilters | null = tipoGrafico
+    ? {
+        plot_type:  PLOT_TYPE[tipoGrafico],
+        prediction: tipoGrafico === "Quantidade de Turistas por Perfil" ? false : undefined,
+        model:      precisaPerfil ? (MODELOS[perfilLabel] ?? undefined) : undefined,
+        group_by:   precisaAgrupamento ? (agrupamento || undefined) : undefined,
+      }
+    : null;
+
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ["historico-plot", dataInicio, dataFim, tipoGrafico, perfilLabel, agrupamento],
+    queryFn:  () => fetchForecastPlot(dataInicio, dataFim, filters!),
+    enabled:  filtrosCompletos && filters !== null,
+  });
 
   return (
     <div className="rounded-md bg-secondary/70 p-4 shadow-sm ring-1 ring-border">
@@ -248,12 +272,17 @@ function HistoricoCard() {
             <p className="text-center text-xs text-muted-foreground">
               Selecione as opções restantes para gerar o gráfico.
             </p>
-          ) : (
-            // Placeholder até que o endpoint de dados históricos seja implementado no backend.
-            <p className="text-center text-xs text-muted-foreground">
-              Visualização de dados históricos em desenvolvimento.
-            </p>
-          )}
+          ) : isLoading ? (
+            <p className="text-center text-sm text-muted-foreground">Gerando gráfico…</p>
+          ) : isError ? (
+            <p className="text-center text-sm text-destructive">Erro ao gerar gráfico. Tente novamente.</p>
+          ) : data ? (
+            <img
+              src={data.image_url}
+              alt="Gráfico de dados históricos"
+              className="h-full w-full object-contain"
+            />
+          ) : null}
         </div>
       </div>
     </div>
@@ -282,10 +311,19 @@ function PrevisaoCard() {
   // Converte o rótulo visual para o nome técnico que o backend espera.
   const modelName = MODELOS[modeloLabel] ?? "";
 
+  // Monta o objeto filters para o POST.
+  // prediction=true sinaliza ao backend que é uma chamada de previsão (Prophet).
+  const filters: PlotFilters = {
+    plot_type:  "line",
+    prediction: true,
+    model:      modelName || undefined,
+    group_by:   agrupamento || undefined,
+  };
+
   const { data, isLoading, isError } = useQuery({
-    queryKey: ["forecast-plot", dataInicio, dataFim, modelName],
-    queryFn:  () => fetchForecastPlot(dataInicio, dataFim, modelName),
-    // Só dispara quando os três campos obrigatórios da API estiverem preenchidos.
+    queryKey: ["forecast-plot", dataInicio, dataFim, modelName, agrupamento],
+    queryFn:  () => fetchForecastPlot(dataInicio, dataFim, filters),
+    // Só dispara quando perfil e datas estiverem preenchidos.
     enabled:  !!(dataInicio && dataFim && modelName),
   });
 
