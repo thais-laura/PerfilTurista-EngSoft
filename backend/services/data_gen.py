@@ -4,6 +4,7 @@ from datetime import timedelta, date
 import time
 import random
 import matplotlib.pyplot as plt
+from services.config import PATHS
 
 def aplicar_tendencia(opcoes, valor_alvo, peso_alvo=0.80):
     """
@@ -37,7 +38,7 @@ def gerar_dataset_turismo_estatistico(n_registros=5000, ano_alvo=2025):
     # Domínios de Dados (Possíveis valores para cada coluna da Tabela 1)
     opcoes_motivo = ["Lazer", "Visitar familiares", "Negócios", "Eventos", "Saúde/Bem-estar"]
     opcoes_acompanhantes = ["Casal", "Família com crianças", "Sozinho", "Grupo de amigos"]
-    opcoes_atrativos = ["Restaurantes, parques, saídas à noite", "Parques aquáticos", "Hoteis", "Conhecer pontos turísticos principais", "Participar de eventos da cidade"]
+    opcoes_atrativos = ["Restaurantes", "Parques de Entretenimento", "Parques Aquáticos", "Pontos Culturais", "Hoteis", "Pontos Turisticos", "Centros de Evento"]
     opcoes_origem = ["São Paulo - SP", "Campinas - SP", "São José do Rio Preto - SP", "Ribeirão Preto - SP", "Goiânia - GO", "Belo Horizonte - MG", "Curitiba - PR"]
     opcoes_escolaridade = ["Ensino Médio", "Superior Incompleto", "Superior Completo", "Pós-graduação"]
     opcoes_ocupacao = ["Empresário/Profissional Liberal", "CLT", "Servidor Público", "Aposentado", "Estudante", "Assalariado"]
@@ -47,7 +48,7 @@ def gerar_dataset_turismo_estatistico(n_registros=5000, ano_alvo=2025):
     perfis_tendencias = {
         "Casal de fim de semana": {
             "Motivo": "Lazer", "Acompanhantes": "Casal", "Gasto_Cat": "Médio/alto",
-            "Permanencia_Dias": 2, "Atrativos": "Restaurantes, parques, saídas à noite",
+            "Permanencia_Dias": 2, "Atrativos": ["Restaurantes", "Parques de Entretenimento", "Parques Aquáticos", "Pontos Culturais"],
             "Feriados": ["Páscoa", "Tiradentes", "1º de Maio", "07 de Setembro", "02 de Novembro", "15 de Novembro", "Réveillon", "Fim de Semana Comum"]
         },
         "Familia de parques aquaticos": {
@@ -67,12 +68,12 @@ def gerar_dataset_turismo_estatistico(n_registros=5000, ano_alvo=2025):
         },
         "Turista econômico": {
             "Motivo": "Visitar familiares", "Acompanhantes": "Família com crianças", "Gasto_Cat": "Baixo/médio",
-            "Permanencia_Dias": 7, "Atrativos": "Conhecer pontos turísticos principais",
+            "Permanencia_Dias": 7, "Atrativos": ["Pontos Turisticos", "Pontos Culturais", "Centro de Eventos"],
             "Feriados": ["Carnaval", "1º de Maio", "Tiradentes", "Semana do Saco Cheio", "20 de Novembro", "Festa do Peão de Boiadeira", "Férias de Janeiro", "Férias de Julho", "Férias de Dezembro"]
         },
         "Turista de Evento": {
             "Motivo": "Eventos", "Acompanhantes": ["Grupo de amigos", "Sozinho", "Casal"], "Gasto_Cat": "Médio",
-            "Permanencia_Dias": 5, "Atrativos": "Participar de eventos da cidade",
+            "Permanencia_Dias": 5, "Atrativos": "Centros de Eventos",
             "Feriados": ["Festa do Peão de Boiadeira"]
         }
     }
@@ -195,18 +196,16 @@ def gerar_dataset_turismo_estatistico(n_registros=5000, ano_alvo=2025):
 
     return pd.DataFrame(dados)
 
-if __name__ == "__main__":
+def generate_csv(Base, ano_alvo):
     random.seed(42)
-    
-    Base = 5000
-    delta = Base/20
+    delta = Base//20
     n_registros = Base+random.randint(-delta,delta)
-    ano_alvo = 2025
 
     # Geração dos dados
     dataset_tabelas = gerar_dataset_turismo_estatistico(n_registros=n_registros, ano_alvo=ano_alvo)
 
-    dataset_tabelas.to_csv(f"../data/original/dataset_turismo_olimpia{ano_alvo}.csv", index=False, encoding='utf-8')
+    TARGET_PATH = PATHS["DATA"] / f"original/dataset_turismo_olimpia{ano_alvo}.csv"
+    dataset_tabelas.to_csv(TARGET_PATH, index=False, encoding='utf-8')
     
     # ------------------------------------------------------------
     # Visualização: Gráfico de Série Temporal (Tendência no Ano)

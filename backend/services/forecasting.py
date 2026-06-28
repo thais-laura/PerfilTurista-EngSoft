@@ -25,7 +25,7 @@ def load_all_models():
     else:
         print("models directory not found.")
 
-def forecast(start_date: date, end_date: date, model_name: str):
+def forecast(start_date: date, end_date: date, model_name: str, period:str):
     global MODEL_CACHE
     future_dates = pd.date_range(start=start_date, end=end_date, freq='D')
     future_df = pd.DataFrame({'ds': future_dates})
@@ -37,8 +37,8 @@ def forecast(start_date: date, end_date: date, model_name: str):
 
     forecast = model.predict(future_df)
 
-    plot_id = plot_forecast(model, forecast, start_date, end_date, model_name)
-    plot_components_id = plot_forecast_components(model, forecast, start_date, end_date, model_name)
+    plot_id = plot_forecast(forecast, start_date, end_date, model_name, period)
+    #plot_components_id = plot_forecast_components(model, forecast, start_date, end_date, model_name)
 
     return plot_id
 
