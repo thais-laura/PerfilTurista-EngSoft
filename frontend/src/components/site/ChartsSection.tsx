@@ -27,9 +27,9 @@ type TipoGrafico = (typeof TIPOS_GRAFICO)[number];
 
 // Agrupamentos: chave = rótulo exibido ao usuário, valor = código de frequência do pandas.
 const AGRUPAMENTOS: Record<string, string> = {
-  "Diariamente": "D",
-  "Mensalmente": "MS",
-  "Anualmente":  "YS",
+  "Diariamente":   "D",
+  "Semanalmente":  "W",
+  "Mensalmente":   "MS",
 };
 
 // Traduz o rótulo de tipoGrafico para o valor de plot_type esperado pela API.
