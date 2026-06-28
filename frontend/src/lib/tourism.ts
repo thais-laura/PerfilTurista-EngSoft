@@ -29,6 +29,7 @@ export interface PlotFilters {
   prediction?: boolean;
   model?:      string;
   group_by?:   string;
+  service?:   string;
 }
 
 /**

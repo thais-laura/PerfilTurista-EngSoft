@@ -353,7 +353,7 @@ function PrevisaoCard() {
     queryKey: ["forecast-plot", dataInicio, dataFim, modelName, agrupamento],
     queryFn:  () => fetchForecastPlot(dataInicio, dataFim, filters),
     // Só dispara quando perfil e datas estiverem preenchidos.
-    enabled:  !!(dataInicio && dataFim && modelName),
+    enabled:  !!(dataInicio && dataFim && modelName && agrupamento),
   });
 
   return (
@@ -392,7 +392,7 @@ function PrevisaoCard() {
       {/* Área do gráfico */}
       <div className="rounded bg-card p-3 ring-1 ring-border">
         <div className="flex h-[500px] w-full items-center justify-center">
-          {!dataInicio || !dataFim || !modelName ? (
+          {!dataInicio || !dataFim || !modelName || !agrupamento ? (
             <p className="text-center text-xs text-muted-foreground">
               Selecione o perfil e o período para gerar a previsão.
             </p>
