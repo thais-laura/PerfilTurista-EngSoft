@@ -205,7 +205,7 @@ def plot_historic(start_date, end_date, tourist_name, period):
         label='Turistas'
     )
     
-    plt.title(f"Dadosde {start_date} para {end_date} para perfil {tourist_name}", fontsize=14, fontweight='bold', pad=15)
+    plt.title(f"Dados de {start_date} para {end_date} para perfil {tourist_name}", fontsize=14, fontweight='bold', pad=15)
     plt.xlabel('Data', fontsize=12)
     plt.ylabel('Turistas', fontsize=12)
     plt.legend(loc='upper left', frameon=True, facecolor='white', edgecolor='none')
