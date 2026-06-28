@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field
 from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
 
-import services.forecasting as tasks
+import services.tasks as tasks
 from services.config import PATHS
 from api.schemas import PlotRequest, PlotResponse, ForecastRequest
 
@@ -29,17 +29,24 @@ async def root():
     response_model=PlotResponse,
     status_code=status.HTTP_201_CREATED
 )
-async def create_plot(request: Request, payload: ForecastRequest):
+async def create_plot(request: Request, payload: PlotRequest):
     try:
-        plot_id = tasks.forecast(
-            start_date=payload.start_date,
+        plot_id = tasks.plot_request_handler(
+            start_date= payload.start_date,
             end_date=payload.end_date,
-            model_name=payload.model_name
+            plot_type=payload.filters["plot_type"],
+            prediction=payload.filters["prediction"],
+            model_name=payload.filters["model"],
+            group_by=payload.filters["group_by"]
         )
         
+        if plot_id is None:
+            raise NotImplementedError("Functionality not yet implemented!")
+
+
         # Build the dynamic URL for the GET endpoint
         base_url = str(request.base_url)
-        image_url = f"{base_url}api/v1/forecast/plots/{plot_id}"
+        image_url = f"{base_url}api/v1/plots/{plot_id}"
 
         return {
             "plot_id": plot_id,
@@ -51,10 +58,12 @@ async def create_plot(request: Request, payload: ForecastRequest):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(fnf))
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+    except NotImplementedError as nie:
+        raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail=str(nie)) 
     
 
 @app.get(
-    "/api/v1/forecast/plots/{plot_id}",
+    "/api/v1/plots/{plot_id}",
     responses={200: {"content": {"image/png": {}}}}
 )
 async def get_plot(plot_id: str):
