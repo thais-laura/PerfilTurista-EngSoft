@@ -21,7 +21,7 @@ const MODELOS: Record<string, string> = {
 const TIPOS_GRAFICO = [
   "Quantidade de Turistas por Perfil",
   "Presença dos Perfis por Serviço",
-  "Salário de turistas por perfil",
+  "Gasto Diário de turistas por perfil",
 ] as const;
 type TipoGrafico = (typeof TIPOS_GRAFICO)[number];
 
@@ -36,7 +36,7 @@ const AGRUPAMENTOS: Record<string, string> = {
 const PLOT_TYPE: Record<string, PlotFilters["plot_type"]> = {
   "Quantidade de Turistas por Perfil": "line",
   "Presença dos Perfis por Serviço":   "pizza",
-  "Salário de turistas por perfil":    "columns",
+  "Gasto Diário de turistas por perfil":    "columns",
 };
 
 // Serviços (atrativos) disponíveis para filtro no gráfico pizza.

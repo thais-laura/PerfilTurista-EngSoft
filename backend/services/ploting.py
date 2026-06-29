@@ -119,7 +119,7 @@ def bar_historic(start_date, end_date):
         )
         bottom += df_plot[tourist_name].values
 
-    ax.set_title(f"Salarios de Turistas entre {start_date} até {end_date}", fontsize=14, fontweight='bold', pad=15)
+    ax.set_title(f"Gasto diário de Turistas entre {start_date} até {end_date}", fontsize=14, fontweight='bold', pad=15)
     ax.set_xlabel('Data', fontsize=12)
     ax.set_ylabel('Turistas', fontsize=12)
 

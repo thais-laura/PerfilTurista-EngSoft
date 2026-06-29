@@ -74,7 +74,7 @@ O sistema permite filtrar e visualizar dados através de três dimensões princi
 1. **Dados Históricos**:
    - **Quantidade de Turistas por Perfil**: Gráfico de linha mostrando o fluxo de determinado perfil (ex: Família, Casal, Corporativo) ao longo do tempo.
    - **Presença dos Perfis por Serviço**: Gráfico de pizza que detalha o market share dos turistas em um serviço específico (ex: Restaurantes, Parques Aquáticos, Hotéis).
-   - **Salário de turistas por perfil**: Gráfico de barras com a distribuição financeira dos visitantes.
+   - **Gasto Diário de turistas por perfil**: Gráfico de barras com o gasto diário dos visitantes que frequentam os estabelecimentos.
 
 2. **Previsões (Machine Learning)**:
    - Projeta o volume futuro de turistas por perfil, exibindo o gráfico de tendências gerado pelo algoritmo Prophet, incluindo margens de incerteza da previsão.
